@@ -2,44 +2,126 @@
   "name": "lilka-lua-tools",
   "displayName": "Lilka Lua Tools",
   "description": "UART/TCP push, autocomplete and linter for Lilka (KeiraOS) Lua development",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "0mandrock1",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other", "Snippets", "Linters"],
-  "keywords": ["lilka", "keira", "lua", "esp32", "uart", "serial"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Linters"
+  ],
+  "keywords": [
+    "lilka",
+    "keira",
+    "lua",
+    "esp32",
+    "uart",
+    "serial"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/0mandrock1/lilka-vscode"
   },
-  "activationEvents": ["onLanguage:lua"],
+  "activationEvents": [
+    "onLanguage:lua"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      { "command": "lilka.pushUartFile", "title": "Lilka: Push file via UART",          "icon": "$(arrow-up)" },
-      { "command": "lilka.pushUartLine", "title": "Lilka: Send current line via UART"                        },
-      { "command": "lilka.pushTcpFile",  "title": "Lilka: Push file via TCP"                                 },
-      { "command": "lilka.openPanel",    "title": "Lilka: Open panel (connection + docs)"                    },
-      { "command": "lilka.selectPort",   "title": "Lilka: Select COM port"                                   },
-      { "command": "lilka.setTcpHost",   "title": "Lilka: Set TCP host (IP)"                                 }
+      {
+        "command": "lilka.pushUartFile",
+        "title": "Lilka: Push file via UART",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "lilka.pushUartLine",
+        "title": "Lilka: Send current line via UART"
+      },
+      {
+        "command": "lilka.pushTcpFile",
+        "title": "Lilka: Push file via TCP"
+      },
+      {
+        "command": "lilka.openPanel",
+        "title": "Lilka: Open panel (connection + docs)"
+      },
+      {
+        "command": "lilka.selectPort",
+        "title": "Lilka: Select COM port"
+      },
+      {
+        "command": "lilka.setTcpHost",
+        "title": "Lilka: Set TCP host (IP)"
+      }
     ],
     "configuration": {
       "title": "Lilka",
       "properties": {
-        "lilka.serialPort":  { "type": "string",  "default": "COM3",            "description": "Serial port (COM3, /dev/ttyUSB0, …)" },
-        "lilka.baudRate":    { "type": "number",  "default": 115200,            "description": "UART baud rate" },
-        "lilka.tcpHost":     { "type": "string",  "default": "192.168.50.168",  "description": "Lilka IP for TCP push" },
-        "lilka.tcpPort":     { "type": "number",  "default": 9988,              "description": "TCP port (nc_receiver)" },
-        "lilka.pythonPath":  { "type": "string",  "default": "python",          "description": "Python path (needs pyserial)" },
-        "lilka.aiApiUrl":    { "type": "string",  "default": "",                "description": "OpenAI-compatible API URL (e.g. http://localhost:11434 for Ollama). Empty = docs search only." },
-        "lilka.aiApiKey":    { "type": "string",  "default": "",                "description": "API key (optional for Ollama, required for OpenAI)" },
-        "lilka.aiModel":     { "type": "string",  "default": "llama3",          "description": "Model name (llama3, gpt-4o-mini, …)" }
+        "lilka.serialPort": {
+          "type": "string",
+          "default": "COM3",
+          "description": "Serial port (COM3, /dev/ttyUSB0, …)"
+        },
+        "lilka.baudRate": {
+          "type": "number",
+          "default": 115200,
+          "description": "UART baud rate"
+        },
+        "lilka.tcpHost": {
+          "type": "string",
+          "default": "192.168.50.168",
+          "description": "Lilka IP for TCP push"
+        },
+        "lilka.tcpPort": {
+          "type": "number",
+          "default": 9988,
+          "description": "TCP port (nc_receiver)"
+        },
+        "lilka.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python path (needs pyserial)"
+        },
+        "lilka.aiApiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI-compatible API URL (e.g. http://localhost:11434 for Ollama). Empty = docs search only."
+        },
+        "lilka.aiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key (optional for Ollama, required for OpenAI)"
+        },
+        "lilka.aiModel": {
+          "type": "string",
+          "default": "llama3",
+          "description": "Model name (llama3, gpt-4o-mini, …)"
+        }
       }
     },
     "keybindings": [
-      { "command": "lilka.pushUartFile", "key": "ctrl+shift+u", "when": "editorLangId == lua" },
-      { "command": "lilka.pushTcpFile",  "key": "ctrl+shift+t", "when": "editorLangId == lua" },
-      { "command": "lilka.pushUartLine", "key": "ctrl+enter",   "when": "editorLangId == lua" },
-      { "command": "lilka.openPanel",    "key": "ctrl+shift+l", "when": "editorLangId == lua" }
+      {
+        "command": "lilka.pushUartFile",
+        "key": "ctrl+shift+u",
+        "when": "editorLangId == lua"
+      },
+      {
+        "command": "lilka.pushTcpFile",
+        "key": "ctrl+shift+t",
+        "when": "editorLangId == lua"
+      },
+      {
+        "command": "lilka.pushUartLine",
+        "key": "ctrl+enter",
+        "when": "editorLangId == lua"
+      },
+      {
+        "command": "lilka.openPanel",
+        "key": "ctrl+shift+l",
+        "when": "editorLangId == lua"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
@@ -61,24 +143,45 @@
     },
     "menus": {
       "editor/context": [
-        { "command": "lilka.pushUartFile", "when": "editorLangId == lua", "group": "lilka@1" },
-        { "command": "lilka.pushTcpFile",  "when": "editorLangId == lua", "group": "lilka@2" },
-        { "command": "lilka.pushUartLine", "when": "editorLangId == lua", "group": "lilka@3" },
-        { "command": "lilka.openPanel",    "when": "editorLangId == lua", "group": "lilka@4" }
+        {
+          "command": "lilka.pushUartFile",
+          "when": "editorLangId == lua",
+          "group": "lilka@1"
+        },
+        {
+          "command": "lilka.pushTcpFile",
+          "when": "editorLangId == lua",
+          "group": "lilka@2"
+        },
+        {
+          "command": "lilka.pushUartLine",
+          "when": "editorLangId == lua",
+          "group": "lilka@3"
+        },
+        {
+          "command": "lilka.openPanel",
+          "when": "editorLangId == lua",
+          "group": "lilka@4"
+        }
       ],
       "editor/title": [
-        { "command": "lilka.pushUartFile", "when": "editorLangId == lua", "group": "navigation" }
+        {
+          "command": "lilka.pushUartFile",
+          "when": "editorLangId == lua",
+          "group": "navigation"
+        }
       ]
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && node -e \"require('fs').copyFileSync('node_modules/fengari-web/dist/fengari-web.js','media/fengari-web.js')\"",
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
+    "fengari-web": "^0.1.4",
     "typescript": "^5.0.0"
   }
 }

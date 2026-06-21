@@ -17,10 +17,14 @@ export class LilkaPanel {
     this.panel = vscode.window.createWebviewPanel(
       'lilkaPanel', 'Lilka',
       vscode.ViewColumn.Beside,
-      { enableScripts: true, retainContextWhenHidden: true }
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
+      }
     );
 
-    this.panel.webview.html = getWebviewHtml(this.panel.webview);
+    this.panel.webview.html = getWebviewHtml(this.panel.webview, context.extensionUri);
     this.panel.webview.postMessage(currentSettings());
 
     this.panel.webview.onDidReceiveMessage(

@@ -12,13 +12,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = new LilkaDiagnosticProvider();
   const statusBar   = new LilkaStatusBar(context);
 
-  // ── Sidebar ────────────────────────────────────────────────────────────────
-  const sidebar = new LilkaSidebarProvider();
+  // ── Sidebar ─────────────────────────────────────────────────────────────
+  const sidebar = new LilkaSidebarProvider(context.extensionUri);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(LilkaSidebarProvider.viewId, sidebar)
   );
 
-  // ── Completion ─────────────────────────────────────────────────────────────
+  // ── Completion ───────────────────────────────────────────────────────────
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
       { scheme: 'file', language: 'lua' },
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
     )
   );
 
-  // ── Diagnostics ────────────────────────────────────────────────────────────
+  // ── Diagnostics ──────────────────────────────────────────────────────────
   if (vscode.window.activeTextEditor) {
     diagnostics.update(vscode.window.activeTextEditor.document);
   }
@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
     { dispose: () => diagnostics.dispose() },
   );
 
-  // ── Commands ───────────────────────────────────────────────────────────────
+  // ── Commands ─────────────────────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand('lilka.pushUartFile', () =>
       pushUartFile(output).catch(err =>

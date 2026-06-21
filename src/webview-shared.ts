@@ -14,7 +14,7 @@ function scriptPath(name: string): string {
 function runPython(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const python = cfg().get<string>('pythonPath', 'python');
-    cp.execFile(python, args, { shell: true }, (err, stdout, stderr) => {
+    cp.execFile(python, args, { shell: true }, (err, stdout) => {
       if (err) { reject(err); return; }
       resolve(stdout.trim());
     });
@@ -116,6 +116,16 @@ export async function handleWebviewMessage(
       post({ type: 'chatReply', text: sections.map(s => `**${s.title}**\n\n${s.body}`).join('\n\n---\n\n') });
       break;
     }
+
+    case 'getFile': {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || !editor.document.fileName.endsWith('.lua')) {
+        post({ type: 'emuError', message: 'Відкрий .lua файл в редакторі' });
+      } else {
+        post({ type: 'runFile', code: editor.document.getText() });
+      }
+      break;
+    }
   }
 }
 
@@ -132,13 +142,17 @@ export function currentSettings() {
   };
 }
 
-export function getWebviewHtml(_webview: vscode.Webview): string {
+export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+  const cspSrc    = webview.cspSource;
+  const fengariUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'fengari-web.js'));
+  const emuUri     = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'emulator.js'));
+
   return /* html */`<!DOCTYPE html>
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+  content="default-src 'none'; script-src 'unsafe-inline' ${cspSrc}; style-src 'unsafe-inline';">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -148,18 +162,22 @@ body{
   background:var(--vscode-editor-background);
   display:flex;flex-direction:column;height:100vh;
 }
-/* ── Connection ── */
-#conn{
-  background:var(--vscode-sideBar-background);
-  border-bottom:1px solid var(--vscode-panel-border);
-  padding:8px 10px;
+/* ── Tabs ── */
+.tabs{
+  display:flex;border-bottom:1px solid var(--vscode-panel-border);
+  background:var(--vscode-sideBar-background);flex-shrink:0;
 }
-#conn-title{
-  font-size:10px;text-transform:uppercase;letter-spacing:.07em;
-  color:var(--vscode-descriptionForeground);margin-bottom:6px;
-  display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+.tab-btn{
+  flex:1;padding:5px 2px;font-size:10px;font-family:inherit;
+  background:none;border:none;color:var(--vscode-descriptionForeground);
+  cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;
 }
-#conn-body{display:flex;flex-direction:column;gap:4px}
+.tab-btn.active{color:var(--vscode-foreground);border-bottom-color:var(--vscode-focusBorder)}
+.tab-btn:hover{color:var(--vscode-foreground)}
+.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column}
+.tab-content.active{display:flex}
+/* ── Connection tab ── */
+#tab-conn{flex-direction:column;overflow-y:auto;padding:8px 10px;gap:6px}
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 label{font-size:11px;color:var(--vscode-descriptionForeground);white-space:nowrap;min-width:52px}
 select,input{
@@ -184,13 +202,8 @@ input.wide{flex:1;min-width:80px}
 }
 .btn.sec:hover{background:var(--vscode-button-secondaryHoverBackground)}
 #save-msg{font-size:10px;color:var(--vscode-charts-green);display:none}
-/* ── Chat ── */
-#chat{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0}
-#chat-title{
-  font-size:10px;text-transform:uppercase;letter-spacing:.07em;
-  color:var(--vscode-descriptionForeground);
-  padding:6px 10px;border-bottom:1px solid var(--vscode-panel-border);
-}
+/* ── Docs tab ── */
+#tab-docs{flex-direction:column}
 #messages{
   flex:1;overflow-y:auto;padding:8px 10px;
   display:flex;flex-direction:column;gap:8px;
@@ -221,7 +234,7 @@ input.wide{flex:1;min-width:80px}
 }
 #input-row{
   display:flex;gap:5px;padding:6px 10px;
-  border-top:1px solid var(--vscode-panel-border);
+  border-top:1px solid var(--vscode-panel-border);flex-shrink:0;
 }
 #q{
   flex:1;padding:4px 7px;
@@ -231,46 +244,80 @@ input.wide{flex:1;min-width:80px}
   border-radius:2px;font-size:11px;font-family:var(--vscode-font-family);
 }
 #q::placeholder{color:var(--vscode-input-placeholderForeground)}
+/* ── Emulator tab ── */
+#tab-emu{flex-direction:column;overflow-y:auto;align-items:center;padding:4px 0}
+#screen{
+  display:block;border:1px solid var(--vscode-panel-border);
+  image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;
+  max-width:100%;outline:none;
+}
+.emu-controls{display:flex;gap:8px;padding:4px 8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.dpad{display:grid;grid-template-rows:auto auto}
+.dpad-row{display:flex;justify-content:center}
+.emu-btn{
+  width:28px;height:28px;
+  background:var(--vscode-button-secondaryBackground);
+  color:var(--vscode-button-secondaryForeground);
+  border:1px solid var(--vscode-panel-border);border-radius:3px;
+  font-size:11px;cursor:pointer;user-select:none;touch-action:none;
+  display:flex;align-items:center;justify-content:center;padding:0;
+}
+.emu-btn:active,.emu-btn.held{background:var(--vscode-button-background);color:var(--vscode-button-foreground)}
+.abcd-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.sys-btns{display:flex;gap:4px}
+.sys-btns .emu-btn{width:40px}
+.emu-toolbar{display:flex;gap:5px;padding:4px 8px;flex-wrap:wrap;justify-content:center}
+#emu-log{
+  width:100%;max-height:120px;overflow-y:auto;
+  font-family:var(--vscode-editor-font-family,monospace);font-size:10px;
+  background:var(--vscode-editor-background);
+  border-top:1px solid var(--vscode-panel-border);
+  padding:4px 8px;color:var(--vscode-descriptionForeground);
+}
+#emu-log div{line-height:1.4}
+.hint{font-size:10px;color:var(--vscode-descriptionForeground);text-align:center;padding:2px 0}
 </style>
 </head>
 <body>
 
-<div id="conn">
-  <div id="conn-title" onclick="toggleConn()">
-    <span id="conn-arrow">▾</span> З'єднання
+<div class="tabs">
+  <button class="tab-btn active" data-tab="conn" onclick="switchTab(this)">З'єднання</button>
+  <button class="tab-btn"        data-tab="docs" onclick="switchTab(this)">Docs</button>
+  <button class="tab-btn"        data-tab="emu"  onclick="switchTab(this)">Емулятор</button>
+</div>
+
+<!-- ══ Connection ═════════════════════════════════════════════════════════ -->
+<div id="tab-conn" class="tab-content active">
+  <div class="row">
+    <label>Порт</label>
+    <select id="port-sel" style="flex:1"></select>
+    <button class="btn sec" onclick="listPorts()" title="Оновити список портів">↻</button>
   </div>
-  <div id="conn-body">
-    <div class="row">
-      <label>Порт</label>
-      <select id="port-sel" style="flex:1"></select>
-      <button class="btn sec" onclick="listPorts()" title="Оновити список портів">↻</button>
-    </div>
-    <div class="row">
-      <label>Baud</label>
-      <input type="number" id="baud" value="115200">
-    </div>
-    <div class="row">
-      <label>TCP host</label>
-      <input type="text" id="tcp-host" class="wide">
-      <input type="number" id="tcp-port" value="9988">
-    </div>
-    <div class="row">
-      <label>AI URL</label>
-      <input type="text" id="ai-url" class="wide" placeholder="http://localhost:11434">
-    </div>
-    <div class="row">
-      <label>Model</label>
-      <input type="text" id="ai-model" class="wide" placeholder="llama3">
-    </div>
-    <div class="row" style="margin-top:2px">
-      <button class="btn" onclick="saveSettings()">Зберегти</button>
-      <span id="save-msg">✓</span>
-    </div>
+  <div class="row">
+    <label>Baud</label>
+    <input type="number" id="baud" value="115200">
+  </div>
+  <div class="row">
+    <label>TCP host</label>
+    <input type="text" id="tcp-host" class="wide">
+    <input type="number" id="tcp-port" value="9988">
+  </div>
+  <div class="row">
+    <label>AI URL</label>
+    <input type="text" id="ai-url" class="wide" placeholder="http://localhost:11434">
+  </div>
+  <div class="row">
+    <label>Model</label>
+    <input type="text" id="ai-model" class="wide" placeholder="llama3">
+  </div>
+  <div class="row" style="margin-top:2px">
+    <button class="btn" onclick="saveSettings()">Зберегти</button>
+    <span id="save-msg">&#10003;</span>
   </div>
 </div>
 
-<div id="chat">
-  <div id="chat-title">Docs / AI</div>
+<!-- ══ Docs / AI ═══════════════════════════════════════════════════════════ -->
+<div id="tab-docs" class="tab-content">
   <div id="messages">
     <div class="msg bot">Привіт! Питай про Lilka API.<br>
     Приклади: <em>draw_line колір</em>, <em>colors.white</em>, <em>adc gpio</em>, <em>tcp сервер</em></div>
@@ -278,22 +325,58 @@ input.wide{flex:1;min-width:80px}
   <div id="input-row">
     <input id="q" type="text" placeholder="display.color565 / buzzer / tcp…"
       onkeydown="if(event.key==='Enter')send()">
-    <button class="btn" onclick="send()">▶</button>
+    <button class="btn" onclick="send()">&#9654;</button>
   </div>
 </div>
 
+<!-- ══ Emulator ════════════════════════════════════════════════════════════ -->
+<div id="tab-emu" class="tab-content">
+  <canvas id="screen" width="240" height="280" tabindex="0"></canvas>
+  <p class="hint">Натисни канвас щоб ввімкнути клавіатуру (WASD/стрілки, Z=A X=B C D, Enter=Start)</p>
+  <div class="emu-controls">
+    <div class="dpad">
+      <div class="dpad-row"><button class="emu-btn" data-btn="up">&#9650;</button></div>
+      <div class="dpad-row" style="gap:2px">
+        <button class="emu-btn" data-btn="left">&#9668;</button>
+        <button class="emu-btn" data-btn="down">&#9660;</button>
+        <button class="emu-btn" data-btn="right">&#9658;</button>
+      </div>
+    </div>
+    <div class="abcd-grid">
+      <button class="emu-btn" data-btn="a">A</button>
+      <button class="emu-btn" data-btn="b">B</button>
+      <button class="emu-btn" data-btn="c">C</button>
+      <button class="emu-btn" data-btn="d">D</button>
+    </div>
+  </div>
+  <div class="sys-btns">
+    <button class="emu-btn" data-btn="select">SEL</button>
+    <button class="emu-btn" data-btn="start">STA</button>
+  </div>
+  <div class="emu-toolbar">
+    <button class="btn" onclick="runEmu()">&#9654; Run</button>
+    <button class="btn sec" onclick="stopEmu()">&#9632; Stop</button>
+    <button class="btn sec" onclick="clearLog()">&#10005; Log</button>
+  </div>
+  <div id="emu-log"></div>
+</div>
+
+<script src="${fengariUri}"></script>
+<script src="${emuUri}"></script>
 <script>
 const vscode = acquireVsCodeApi();
-let connOpen = true;
 
-function toggleConn() {
-  connOpen = !connOpen;
-  document.getElementById('conn-body').style.display = connOpen ? '' : 'none';
-  document.getElementById('conn-arrow').textContent = connOpen ? '▾' : '▸';
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  var id = 'tab-' + btn.dataset.tab;
+  document.getElementById(id).classList.add('active');
 }
 
-window.addEventListener('message', e => {
-  const msg = e.data;
+/* ── connection ─────────────────────────────────────────────────── */
+window.addEventListener('message', function(e) {
+  var msg = e.data;
   if (msg.type === 'settings') {
     document.getElementById('baud').value     = msg.baud;
     document.getElementById('tcp-host').value = msg.tcpHost;
@@ -303,28 +386,31 @@ window.addEventListener('message', e => {
     setPort(msg.port);
   }
   if (msg.type === 'ports') {
-    const sel = document.getElementById('port-sel');
-    const cur = sel.value;
+    var sel = document.getElementById('port-sel');
+    var cur = sel.value;
     sel.innerHTML = msg.ports.length
-      ? msg.ports.map(p => '<option value="'+p.port+'">'+p.port+' — '+p.desc+'</option>').join('')
-      : '<option value="">— немає —</option>';
+      ? msg.ports.map(function(p) { return '<option value="'+p.port+'">'+p.port+' - '+p.desc+'</option>'; }).join('')
+      : '<option value="">- немає -</option>';
     if (cur) setPort(cur);
   }
   if (msg.type === 'saved') {
-    const el = document.getElementById('save-msg');
+    var el = document.getElementById('save-msg');
     el.style.display = 'inline';
-    setTimeout(() => el.style.display = 'none', 2000);
+    setTimeout(function() { el.style.display = 'none'; }, 2000);
   }
   if (msg.type === 'chatReply') {
-    document.querySelector('.msg.thinking')?.remove();
+    document.querySelector('.msg.thinking') && document.querySelector('.msg.thinking').remove();
     appendMsg('bot', msg.text);
   }
+  /* emulator messages (runFile / emuError) handled by emulator.js */
 });
 
 function setPort(p) {
-  const sel = document.getElementById('port-sel');
-  for (const o of sel.options) { if (o.value === p) { o.selected = true; return; } }
-  const o = new Option(p, p, true, true);
+  var sel = document.getElementById('port-sel');
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === p) { sel.selectedIndex = i; return; }
+  }
+  var o = new Option(p, p, true, true);
   sel.insertBefore(o, sel.firstChild);
   sel.value = p;
 }
@@ -343,9 +429,10 @@ function saveSettings() {
   });
 }
 
+/* ── docs chat ────────────────────────────────────────────────────── */
 function appendMsg(role, text) {
-  const msgs = document.getElementById('messages');
-  const div  = document.createElement('div');
+  var msgs = document.getElementById('messages');
+  var div  = document.createElement('div');
   div.className = 'msg ' + role;
   div.innerHTML = role === 'bot' ? fmt(text) : esc(text);
   msgs.appendChild(div);
@@ -353,29 +440,34 @@ function appendMsg(role, text) {
 }
 
 function send() {
-  const inp  = document.getElementById('q');
-  const text = inp.value.trim();
+  var inp  = document.getElementById('q');
+  var text = inp.value.trim();
   if (!text) return;
   inp.value = '';
   appendMsg('user', text);
-  const th = document.createElement('div');
-  th.className = 'msg thinking'; th.textContent = 'шукаю…';
+  var th = document.createElement('div');
+  th.className = 'msg thinking'; th.textContent = 'шукаю...';
   document.getElementById('messages').appendChild(th);
   document.getElementById('messages').scrollTop = 99999;
-  vscode.postMessage({ type: 'chat', text });
+  vscode.postMessage({ type: 'chat', text: text });
 }
 
 function esc(t) {
   return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function fmt(text) {
-  text = text.replace(/\`\`\`[\\w]*\\n?([\\s\\S]*?)\`\`\`/g, (_,c)=>'<pre>'+esc(c.trim())+'</pre>');
-  text = text.replace(/\`([^\`]+)\`/g, (_,c)=>'<code>'+esc(c)+'</code>');
-  text = text.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
+  text = text.replace(/\`\`\`[\w]*\n?/g,'<pre>').replace(/\`\`\`/g,'</pre>');
+  text = text.replace(/\`([^\`]+)\`/g, function(_,c){return '<code>'+esc(c)+'</code>';});
+  text = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   text = text.replace(/^---$/gm,'<hr style="border-color:var(--vscode-panel-border);margin:6px 0">');
-  text = text.replace(/\\n/g,'<br>');
+  text = text.replace(/\n/g,'<br>');
   return text;
 }
+
+/* ── emulator controls ─────────────────────────────────────────────── */
+function runEmu()  { vscode.postMessage({ type: 'getFile' }); }
+function stopEmu() { if (window.EMU) EMU.stop(); }
+function clearLog(){ var l = document.getElementById('emu-log'); if (l) l.innerHTML = ''; }
 
 listPorts();
 </script>
