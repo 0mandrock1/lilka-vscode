@@ -1,0 +1,108 @@
+{
+  "name": "lilka-lua-tools",
+  "displayName": "Lilka Lua Tools",
+  "description": "UART/TCP push, autocomplete and linter for Lilka (KeiraOS) Lua development",
+  "version": "0.1.0",
+  "publisher": "0mandrock1",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other", "Snippets", "Linters"],
+  "keywords": ["lilka", "keira", "lua", "esp32", "uart", "serial"],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0mandrock1/lilka-vscode"
+  },
+  "activationEvents": ["onLanguage:lua"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lilka.pushUartFile",
+        "title": "Lilka: Push file via UART",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "lilka.pushUartLine",
+        "title": "Lilka: Send current line via UART"
+      },
+      {
+        "command": "lilka.pushTcpFile",
+        "title": "Lilka: Push file via TCP (nc_receiver)"
+      },
+      {
+        "command": "lilka.selectPort",
+        "title": "Lilka: Select COM port"
+      },
+      {
+        "command": "lilka.setTcpHost",
+        "title": "Lilka: Set TCP host (IP)"
+      }
+    ],
+    "configuration": {
+      "title": "Lilka",
+      "properties": {
+        "lilka.serialPort": {
+          "type": "string",
+          "default": "COM3",
+          "description": "Serial port for UART push (e.g. COM3, /dev/ttyUSB0)"
+        },
+        "lilka.baudRate": {
+          "type": "number",
+          "default": 115200,
+          "description": "UART baud rate"
+        },
+        "lilka.tcpHost": {
+          "type": "string",
+          "default": "192.168.50.168",
+          "description": "Lilka IP address for TCP push (nc_receiver.lua must be running)"
+        },
+        "lilka.tcpPort": {
+          "type": "number",
+          "default": 9988,
+          "description": "TCP port for nc_receiver"
+        },
+        "lilka.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python executable path (needs pyserial for UART)"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "lilka.pushUartFile",
+        "key": "ctrl+shift+u",
+        "when": "editorLangId == lua"
+      },
+      {
+        "command": "lilka.pushTcpFile",
+        "key": "ctrl+shift+t",
+        "when": "editorLangId == lua"
+      },
+      {
+        "command": "lilka.pushUartLine",
+        "key": "ctrl+enter",
+        "when": "editorLangId == lua"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "lilka.pushUartFile",
+          "when": "editorLangId == lua",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.0.0"
+  }
+}
