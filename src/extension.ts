@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { LilkaCompletionProvider } from './completion';
 import { LilkaDiagnosticProvider } from './diagnostics';
-import { pushUartFile, pushUartLine } from './serial';
+import { pushUartFile, pushUartLine, listPortsQuickPick } from './serial';
 import { pushTcpFile } from './tcp';
 import { LilkaStatusBar } from './statusbar';
+import { LilkaPanel } from './panel';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output      = vscode.window.createOutputChannel('Lilka');
@@ -14,17 +15,16 @@ export function activate(context: vscode.ExtensionContext): void {
   const completion = vscode.languages.registerCompletionItemProvider(
     { scheme: 'file', language: 'lua' },
     new LilkaCompletionProvider(),
-    '.',  // trigger on '.'
+    '.',
   );
 
   // ── Diagnostics ────────────────────────────────────────────────────────────
   if (vscode.window.activeTextEditor) {
     diagnostics.update(vscode.window.activeTextEditor.document);
   }
-
-  const onOpen = vscode.workspace.onDidOpenTextDocument(doc => diagnostics.update(doc));
+  const onOpen   = vscode.workspace.onDidOpenTextDocument(doc => diagnostics.update(doc));
   const onChange = vscode.workspace.onDidChangeTextDocument(e => diagnostics.update(e.document));
-  const onClose = vscode.workspace.onDidCloseTextDocument(doc => diagnostics.clear(doc));
+  const onClose  = vscode.workspace.onDidCloseTextDocument(doc => diagnostics.clear(doc));
 
   // ── Commands ───────────────────────────────────────────────────────────────
   const cmdPushUartFile = vscode.commands.registerCommand('lilka.pushUartFile', () =>
@@ -43,14 +43,14 @@ export function activate(context: vscode.ExtensionContext): void {
     pushTcpFile(output).catch(() => { /* error shown inside */ })
   );
 
+  const cmdOpenPanel = vscode.commands.registerCommand('lilka.openPanel', () =>
+    LilkaPanel.show(context)
+  );
+
   const cmdSelectPort = vscode.commands.registerCommand('lilka.selectPort', async () => {
-    const current = vscode.workspace.getConfiguration('lilka').get<string>('serialPort', 'COM3');
-    const val = await vscode.window.showInputBox({
-      prompt: 'Порт UART (напр. COM3 або /dev/ttyUSB0)',
-      value: current,
-    });
-    if (val !== undefined) {
-      await vscode.workspace.getConfiguration('lilka').update('serialPort', val, true);
+    const picked = await listPortsQuickPick();
+    if (picked) {
+      await vscode.workspace.getConfiguration('lilka').update('serialPort', picked, true);
       statusBar.refresh();
     }
   });
@@ -77,12 +77,10 @@ export function activate(context: vscode.ExtensionContext): void {
     completion,
     onOpen, onChange, onClose,
     cmdPushUartFile, cmdPushUartLine, cmdPushTcp,
-    cmdSelectPort, cmdSetTcpHost,
+    cmdOpenPanel, cmdSelectPort, cmdSetTcpHost,
     onConfig,
     { dispose: () => diagnostics.dispose() },
   );
-
-  output.appendLine('Lilka Lua Tools активовано.');
 }
 
 export function deactivate(): void {}

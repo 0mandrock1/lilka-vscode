@@ -20,7 +20,7 @@ if not os.path.exists(FILE):
 with open(FILE, 'r', encoding='utf-8') as f:
     code = f.read()
 
-print(f"Sending {os.path.basename(FILE)} ({len(code)} bytes) → {PORT} @ {BAUD}...")
+print(f"Sending {os.path.basename(FILE)} ({len(code)} bytes) -> {PORT} @ {BAUD}...")
 
 s = serial.Serial(PORT, BAUD, timeout=2)
 time.sleep(0.3)
