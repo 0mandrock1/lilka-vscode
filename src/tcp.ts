@@ -67,9 +67,12 @@ export async function pushTcpFile(output: vscode.OutputChannel): Promise<void> {
     });
 
     socket.on('error', (err: Error) => {
-      const msg = `TCP помилка: ${err.message}`;
+      const hint = err.message.includes('ECONNREFUSED')
+        ? `\nЗапусти на Лілці: apps/nc_receiver.lua (${host}:${port})`
+        : '';
+      const msg = `TCP: ${err.message}${hint}`;
       output.appendLine(msg);
-      vscode.window.showErrorMessage(`Lilka: ${msg}`);
+      vscode.window.showErrorMessage(`Lilka: ${msg}`, 'OK');
       reject(err);
     });
   });

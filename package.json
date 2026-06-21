@@ -2,7 +2,7 @@
   "name": "lilka-lua-tools",
   "displayName": "Lilka Lua Tools",
   "description": "UART/TCP push, autocomplete and linter for Lilka (KeiraOS) Lua development",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "0mandrock1",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other", "Snippets", "Linters"],
@@ -41,6 +41,24 @@
       { "command": "lilka.pushUartLine", "key": "ctrl+enter",   "when": "editorLangId == lua" },
       { "command": "lilka.openPanel",    "key": "ctrl+shift+l", "when": "editorLangId == lua" }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lilka-container",
+          "title": "Lilka",
+          "icon": "media/lilka.svg"
+        }
+      ]
+    },
+    "views": {
+      "lilka-container": [
+        {
+          "type": "webview",
+          "id": "lilka.sidebar",
+          "name": "Lilka"
+        }
+      ]
+    },
     "menus": {
       "editor/context": [
         { "command": "lilka.pushUartFile", "when": "editorLangId == lua", "group": "lilka@1" },
