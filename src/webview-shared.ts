@@ -31,7 +31,7 @@ async function queryAi(question: string, context: string): Promise<string> {
     'Ти асистент для розробки на Lilka (ESP32-S3 KeiraOS Lua консоль). ' +
     'Відповідай українською, коротко і по справі. Документація:\n\n' + context;
 
-  const isOllama = apiUrl.includes(':11434');
+  const isOllama = !apiUrl.includes('/v1');
   const body = isOllama
     ? JSON.stringify({ model, prompt: `${systemPrompt}\n\nПитання: ${question}`, stream: false })
     : JSON.stringify({ model, messages: [
@@ -138,7 +138,7 @@ export function currentSettings() {
     tcpHost:  c.get<string>('tcpHost', '192.168.50.168'),
     tcpPort:  c.get<number>('tcpPort', 9988),
     aiApiUrl: c.get<string>('aiApiUrl', ''),
-    aiModel:  c.get<string>('aiModel', 'llama3'),
+    aiModel:  c.get<string>('aiModel', 'llama3.2:3b'),
   };
 }
 
@@ -174,7 +174,7 @@ body{
 }
 .tab-btn.active{color:var(--vscode-foreground);border-bottom-color:var(--vscode-focusBorder)}
 .tab-btn:hover{color:var(--vscode-foreground)}
-.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column}
+.tab-content{display:none;flex:1;min-height:0;flex-direction:column}
 .tab-content.active{display:flex}
 /* ── Connection tab ── */
 #tab-conn{flex-direction:column;overflow-y:auto;padding:8px 10px;gap:6px}

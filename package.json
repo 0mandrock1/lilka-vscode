@@ -96,7 +96,7 @@
         },
         "lilka.aiModel": {
           "type": "string",
-          "default": "llama3",
+          "default": "llama3.2:3b",
           "description": "Model name (llama3, gpt-4o-mini, …)"
         }
       }
