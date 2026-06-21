@@ -49,11 +49,11 @@ function numArg(L, idx) {
 }
 
 function strArg(L, idx) {
-  var lua = fengari.lua, lauxlib = fengari.lauxlib;
+  var lua = fengari.lua;
   var t = lua.lua_type(L, idx);
-  if (t === lua.LUA_TNUMBER) return String(lua.lua_tonumber(L, idx));
-  var raw = lauxlib.luaL_tolstring(L, idx, null);
-  lua.lua_pop(L, 1);
+  if (t === lua.LUA_TNUMBER)  return String(lua.lua_tonumber(L, idx));
+  if (t === lua.LUA_TBOOLEAN) return lua.lua_toboolean(L, idx) ? 'true' : 'false';
+  var raw = lua.lua_tostring(L, idx);
   return raw ? lua.to_jsstring(raw) : '';
 }
 
@@ -331,7 +331,6 @@ EMU.start = function(code) {
   emuLog('--- start ---');
   EMU.running = true;
   EMU.keys = {}; EMU.prevKeys = {};
-  EMU._shouldExit = function() { return false; };
 
   callLua('init', []);
   EMU.lastTime = performance.now();
